@@ -184,7 +184,6 @@ impl Workbook {
 
                 let reader = BufReader::new(rels);
                 let mut reader = Reader::from_reader(reader);
-                reader.trim_text(true);
 
                 let mut buf = Vec::new();
                 loop {
@@ -233,7 +232,6 @@ impl Workbook {
                 // let _ = std::io::copy(&mut wb, &mut std::io::stdout());
                 let reader = BufReader::new(wb);
                 let mut reader = Reader::from_reader(reader);
-                reader.trim_text(true);
 
                 let mut buf = Vec::new();
                 let mut current_sheet_num: u8 = 0;
@@ -364,8 +362,7 @@ impl Workbook {
         };
         // let _ = std::io::copy(&mut target, &mut std::io::stdout());
         let reader = BufReader::new(target);
-        let mut reader = Reader::from_reader(reader);
-        reader.trim_text(true);
+        let reader = Reader::from_reader(reader);
         SheetReader::new(reader, &self.strings, &self.styles, &self.date_system)
     }
 
@@ -378,7 +375,6 @@ fn strings(zip_file: &mut ZipArchive<File>) -> Vec<String> {
         Ok(strings_file) => {
             let reader = BufReader::new(strings_file);
             let mut reader = Reader::from_reader(reader);
-            reader.trim_text(true);
             let mut buf = Vec::new();
             let mut this_string = String::new();
             let mut preserve_space = false;
@@ -401,7 +397,7 @@ fn strings(zip_file: &mut ZipArchive<File>) -> Vec<String> {
                         if preserve_space {
                             strings.push(this_string.to_owned());
                         } else {
-                            strings.push(this_string.trim().to_owned());
+                            strings.push(this_string.to_owned());
                         }
                         this_string = String::new();
                     },
@@ -430,7 +426,6 @@ fn find_styles(xlsx: &mut ZipArchive<fs::File>) -> Vec<String> {
     // let _ = std::io::copy(&mut styles_xml, &mut std::io::stdout());
     let reader = BufReader::new(styles_xml);
     let mut reader = Reader::from_reader(reader);
-    reader.trim_text(true);
     let mut buf = Vec::new();
     let mut record_styles = false;
     loop {
@@ -507,7 +502,6 @@ fn get_date_system(xlsx: &mut ZipArchive<fs::File>) -> DateSystem {
         Ok(wb) => {
             let reader = BufReader::new(wb);
             let mut reader = Reader::from_reader(reader);
-            reader.trim_text(true);
             let mut buf = Vec::new();
             loop {
                 match reader.read_event(&mut buf) {
