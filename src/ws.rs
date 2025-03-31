@@ -155,8 +155,8 @@ impl fmt::Display for ExcelValue<'_> {
             ExcelValue::Error(e) => write!(f, "#{}", e),
             ExcelValue::None => write!(f, ""),
             ExcelValue::Number(n) => write!(f, "{}", n),
-            ExcelValue::String(s) => write!(f, "\"{}\"", s.replace(r#"""#, r#""""#)),
-            ExcelValue::Time(t) => write!(f, "\"{}\"", t),
+            ExcelValue::String(s) => write!(f, "{}", s),
+            ExcelValue::Time(t) => write!(f, "{}", t),
         }
     }
 }
