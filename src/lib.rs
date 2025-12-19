@@ -88,7 +88,7 @@ impl<'a> fmt::Display for ConfigError<'a> {
 }
 
 impl Config {
-    pub fn new(args: &[String]) -> Result<Config, ConfigError> {
+    pub fn new(args: &[String]) -> Result<Config, ConfigError<'_>> {
         if args.len() < 2 {
             return Err(ConfigError::NeedPathAndTab(&args[0]))
         } else if args.len() < 3 {

@@ -96,14 +96,14 @@ pub enum SheetNameOrNum<'a> {
 
 /// Trait to make it easy to use `get` when trying to get a sheet. You will probably not use this
 /// struct directly.
-pub trait SheetAccessTrait { fn go(&self) -> SheetNameOrNum; }
+pub trait SheetAccessTrait { fn go(&self) -> SheetNameOrNum<'_>; }
 
 impl SheetAccessTrait for &str {
-    fn go(&self) -> SheetNameOrNum { SheetNameOrNum::Name(*self) }
+    fn go(&self) -> SheetNameOrNum<'_> { SheetNameOrNum::Name(*self) }
 }
 
 impl SheetAccessTrait for usize {
-    fn go(&self) -> SheetNameOrNum { SheetNameOrNum::Pos(*self) }
+    fn go(&self) -> SheetNameOrNum<'_> { SheetNameOrNum::Pos(*self) }
 }
 
 impl SheetMap {
