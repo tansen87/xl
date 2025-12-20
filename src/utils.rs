@@ -1,6 +1,7 @@
 use std::convert::TryInto;
 use chrono::{Duration, NaiveDate, NaiveDateTime, NaiveTime};
 use quick_xml::events::attributes::{Attribute, Attributes};
+use quick_xml::name::QName;
 use crate::wb::DateSystem;
 
 const XL_MAX_COL: u16 = 16384;
@@ -38,7 +39,7 @@ pub fn attr_value(a: &Attribute) -> String {
 pub fn get(attrs: Attributes, which: &[u8]) -> Option<String> {
     for attr in attrs {
         let a = attr.unwrap();
-        if a.key == which {
+        if a.key == QName(which) {
             return Some(attr_value(&a))
         }
     }
@@ -62,7 +63,10 @@ pub fn excel_number_to_date(number: f64, date_system: &DateSystem) -> DateConver
         DateSystem::V1900 => {
             // Under the 1900 base system, 1 represents 1/1/1900 (so we start with a base date of
             // 12/31/1899).
-            let mut base = NaiveDate::from_ymd(1899, 12, 31).and_hms(0, 0, 0);
+            let mut base = NaiveDate::from_ymd_opt(1899, 12, 31)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap();
             // BUT (!), Excel considers 1900 a leap-year which it is not. As such, it will happily
             // represent 2/29/1900 with the number 60, but we cannot convert that value to a date
             // so we throw an error.
@@ -78,7 +82,10 @@ pub fn excel_number_to_date(number: f64, date_system: &DateSystem) -> DateConver
         DateSystem::V1904 => {
             // Under the 1904 system, 1 represent 1/2/1904 so we start with a base date of
             // 1/1/1904.
-            NaiveDate::from_ymd(1904, 1, 1).and_hms(0, 0, 0)
+            NaiveDate::from_ymd_opt(1904, 1, 1)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap()
         }
     };
     let days = number.trunc() as i64;
@@ -92,7 +99,7 @@ pub fn excel_number_to_date(number: f64, date_system: &DateSystem) -> DateConver
     let date = base + Duration::days(days) + seconds + milliseconds;
     if days == 0 {
         DateConversion::Time(date.time())
-    } else if date.time() == NaiveTime::from_hms(0, 0, 0) {
+    } else if Some(date.time()) == NaiveTime::from_hms_opt(0, 0, 0) {
         DateConversion::Date(date.date())
     } else {
         DateConversion::DateTime(date)

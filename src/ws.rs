@@ -5,6 +5,7 @@ use crate::utils;
 use std::borrow::Cow;
 use std::cmp;
 use std::fmt;
+use std::fs::File;
 use std::io::BufReader;
 use std::mem;
 use std::ops::Index;
@@ -12,6 +13,7 @@ use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use zip::read::ZipFile;
 use quick_xml::Reader;
 use quick_xml::events::Event;
+use quick_xml::name::QName;
 // use quick_xml::events::attributes::Attribute;
 use crate::wb::{DateSystem, Workbook};
 
@@ -21,7 +23,7 @@ use crate::wb::{DateSystem, Workbook};
 /// must be provided through the `SheetReader::new` method. See that method for documentation of
 /// each item.
 pub struct SheetReader<'a> {
-    reader: Reader<BufReader<ZipFile<'a>>>,
+    reader: Reader<BufReader<ZipFile<'a, File>>>,
     strings: &'a [String],
     styles: &'a [String],
     date_system: &'a DateSystem,
@@ -44,7 +46,7 @@ impl<'a> SheetReader<'a> {
     ///   contain date values. See the documentation for the `DateSystem` enum for more
     ///   information.
     pub fn new(
-        reader: Reader<BufReader<ZipFile<'a>>>,
+        reader: Reader<BufReader<ZipFile<'a, File>>>,
         strings: &'a [String],
         styles: &'a [String],
         date_system: &'a DateSystem) -> SheetReader<'a> {
@@ -301,9 +303,9 @@ impl<'a> Iterator for RowIter<'a> {
             let mut c = new_cell();
             let mut this_row: usize = 0;
             loop {
-                match reader.read_event(&mut buf) {
+                match reader.read_event_into(&mut buf) {
                     /* may be able to get a better estimate for the used area */
-                    Ok(Event::Empty(ref e)) if e.name() == b"dimension" => {
+                    Ok(Event::Empty(ref e)) if e.name() == QName(b"dimension") => {
                         if let Some(used_area_range) = utils::get(e.attributes(), b"ref") {
                             if used_area_range != "A1" {
                                 let (rows, cols) = used_area(&used_area_range);
@@ -313,21 +315,21 @@ impl<'a> Iterator for RowIter<'a> {
                         }
                     },
                     /* -- end search for used area */
-                    Ok(Event::Start(ref e)) if e.name() == b"row" => {
+                    Ok(Event::Start(ref e)) if e.name() == QName(b"row") => {
                         this_row = utils::get(e.attributes(), b"r").unwrap().parse().unwrap();
                     },
-                    Ok(Event::Start(ref e)) if e.name() == b"c" => {
+                    Ok(Event::Start(ref e)) if e.name() == QName(b"c") => {
                         in_cell = true;
                         e.attributes()
                             .for_each(|a| {
                                 let a = a.unwrap();
-                                if a.key == b"r" {
+                                if a.key == QName(b"r") {
                                     c.reference = utils::attr_value(&a);
                                 }
-                                if a.key == b"t" {
+                                if a.key == QName(b"t") {
                                     c.cell_type = utils::attr_value(&a);
                                 }
-                                if a.key == b"s" {
+                                if a.key == QName(b"s") {
                                     if let Ok(num) = utils::attr_value(&a).parse::<usize>() {
                                         if let Some(style) = styles.get(num) {
                                             c.style = style.to_string();
@@ -336,13 +338,14 @@ impl<'a> Iterator for RowIter<'a> {
                                 }
                             });
                     },
-                    Ok(Event::Start(ref e)) if e.name() == b"v" || e.name() == b"t" => {
+                    Ok(Event::Start(ref e)) if e.name() == QName(b"v") || e.name() == QName(b"t") => {
                         in_value = true;
                     },
                     // note: because v elements are children of c elements,
                     // need this check to go before the 'in_cell' check
                     Ok(Event::Text(ref e)) if in_value => {
-                        c.raw_value = e.unescape_and_decode(&reader).unwrap();
+                        let decoded = reader.decoder().decode(e).unwrap();
+                        c.raw_value = quick_xml::escape::unescape(&decoded).unwrap().to_string();
                         c.value = match &c.cell_type[..] {
                             "s" => {
                                 if let Ok(pos) = c.raw_value.parse::<usize>() {
@@ -378,13 +381,14 @@ impl<'a> Iterator for RowIter<'a> {
                         };
                     },
                     Ok(Event::Text(ref e)) if in_cell => {
-                        let txt = e.unescape_and_decode(&reader).unwrap();
+                        let decoded = reader.decoder().decode(e).unwrap();
+                        let txt = quick_xml::escape::unescape(&decoded).unwrap();
                         c.formula.push_str(&txt)
                     },
-                    Ok(Event::End(ref e)) if e.name() == b"v" || e.name() == b"t" => {
+                    Ok(Event::End(ref e)) if e.name() == QName(b"v") || e.name() == QName(b"t") => {
                         in_value = false;
                     },
-                    Ok(Event::End(ref e)) if e.name() == b"c" => {
+                    Ok(Event::End(ref e)) if e.name() == QName(b"c") => {
                         if let Some(prev) = row.last() {
                             let (mut last_col, _) = prev.coordinates();
                             let (this_col, this_row) = c.coordinates();
@@ -409,7 +413,7 @@ impl<'a> Iterator for RowIter<'a> {
                         c = new_cell();
                         in_cell = false;
                     },
-                    Ok(Event::End(ref e)) if e.name() == b"row" => {
+                    Ok(Event::End(ref e)) if e.name() == QName(b"row") => {
                         self.num_cols = cmp::max(self.num_cols, row.len() as u16);
                         while row.len() < self.num_cols as usize {
                             let mut cell = new_cell();
