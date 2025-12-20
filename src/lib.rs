@@ -205,7 +205,7 @@ pub fn run(config: Config) -> Result<(), String> {
 pub fn usage() {
     println!(concat!(
         "\n",
-        "xlcat 0.1.8\n",
+        "xlcat 0.1.82\n",
         "Kevin Ryan <ktr@xlpro.tips>\n",
         "\n",
         "xlcat is like cat, but for Excel files (xlsx files to be precise). You simply\n",
@@ -229,7 +229,7 @@ pub fn usage() {
 }
 
 pub fn version() {
-    println!("xlcat 0.1.8");
+    println!("xlcat 0.1.82");
 }
 
 /// Convert CSV rows to markdown table format
