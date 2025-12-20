@@ -305,7 +305,7 @@ impl<'a> Iterator for RowIter<'a> {
             loop {
                 match reader.read_event_into(&mut buf) {
                     /* may be able to get a better estimate for the used area */
-                    Ok(Event::Empty(ref e)) if e.name() == QName(b"dimension") => {
+                    Ok(Event::Empty(ref e)) | Ok(Event::Start(ref e)) if e.name() == QName(b"dimension") => {
                         if let Some(used_area_range) = utils::get(e.attributes(), b"ref") {
                             if used_area_range != "A1" {
                                 let (rows, cols) = used_area(&used_area_range);
@@ -471,5 +471,17 @@ mod tests {
         assert_eq!(row2[3].value, ExcelValue::Number(0.0));
         let row3 = row_iter.next().unwrap();
         assert_eq!(row3[4].value, ExcelValue::String(Cow::Borrowed("Bit")));
+    }
+
+    // https://github.com/xlprotips/xl/issues/5
+    #[test]
+    fn handle_empty_start_end_elements() {
+        let mut wb = Workbook::open("tests/data/2023P2V1_OTH.xlsx").unwrap();
+        let sheets = wb.sheets();
+        let ws = sheets.get("Sheet1").unwrap();
+        let mut row_iter = ws.rows(&mut wb);
+        let row2 = row_iter.nth(1).unwrap();
+        let cell_a2 = &row2[0];
+        assert_eq!(cell_a2.value, ExcelValue::String(Cow::Borrowed("10071")));
     }
 }

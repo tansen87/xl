@@ -190,7 +190,7 @@ impl Workbook {
                 let mut buf = Vec::new();
                 loop {
                     match reader.read_event_into(&mut buf) {
-                        Ok(Event::Empty(ref e)) if e.name() == QName(b"Relationship") => {
+                        Ok(Event::Empty(ref e)) | Ok(Event::Start(ref e)) if e.name() == QName(b"Relationship") => {
                             let mut id = String::new();
                             let mut target = String::new();
                             e.attributes()
@@ -240,7 +240,7 @@ impl Workbook {
                 let mut current_sheet_num: u8 = 0;
                 loop {
                     match reader.read_event_into(&mut buf) {
-                        Ok(Event::Empty(ref e)) if e.name() == QName(b"sheet") => {
+                        Ok(Event::Empty(ref e)) | Ok(Event::Start(ref e)) if e.name() == QName(b"sheet") => {
                             current_sheet_num += 1;
                             let mut name = String::new();
                             let mut id = String::new();
@@ -401,7 +401,7 @@ fn strings(zip_file: &mut ZipArchive<File>) -> Vec<String> {
                         let txt = quick_xml::escape::unescape(&decoded).unwrap();
                         this_string.push_str(&txt[..])
                     },
-                    Ok(Event::Empty(ref e)) if e.name() == QName(b"t") => strings.push("".to_owned()),
+                    Ok(Event::Empty(ref e)) | Ok(Event::Start(ref e)) if e.name() == QName(b"t") => strings.push("".to_owned()),
                     Ok(Event::End(ref e)) if e.name() == QName(b"t") => {
                         if preserve_space {
                             strings.push(this_string.to_owned());
@@ -440,7 +440,7 @@ fn find_styles(xlsx: &mut ZipArchive<fs::File>) -> Vec<String> {
     let mut record_styles = false;
     loop {
         match reader.read_event_into(&mut buf) {
-            Ok(Event::Empty(ref e)) if e.name() == QName(b"numFmt") => {
+            Ok(Event::Empty(ref e)) | Ok(Event::Start(ref e)) if e.name() == QName(b"numFmt") => {
                 let id = utils::get(e.attributes(), b"numFmtId").unwrap();
                 let code = utils::get(e.attributes(), b"formatCode").unwrap();
                 number_formats.insert(id, code);
@@ -516,7 +516,7 @@ fn get_date_system(xlsx: &mut ZipArchive<fs::File>) -> DateSystem {
             let mut buf = Vec::new();
             loop {
                 match reader.read_event_into(&mut buf) {
-                    Ok(Event::Empty(ref e)) if e.name() == QName(b"workbookPr") => {
+                    Ok(Event::Empty(ref e)) | Ok(Event::Start(ref e)) if e.name() == QName(b"workbookPr") => {
                         if let Some(system) = utils::get(e.attributes(), b"date1904") {
                             if system == "1" {
                                 break DateSystem::V1904
