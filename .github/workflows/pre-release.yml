@@ -33,25 +33,29 @@ jobs:
         build: [linux, macos, win-msvc, win32-msvc]
         include:
         - build: linux
-          os: ubuntu-18.04
+          os: ubuntu-latest
           rust: nightly
           target: x86_64-unknown-linux-musl
+          friendly_name: linux-x64
         - build: macos
           os: macos-latest
           rust: nightly
           target: x86_64-apple-darwin
+          friendly_name: macos-x64
         - build: win-msvc
           os: windows-2019
           rust: nightly
           target: x86_64-pc-windows-msvc
+          friendly_name: windows-x64
         - build: win32-msvc
           os: windows-2019
           rust: nightly
           target: i686-pc-windows-msvc
+          friendly_name: windows-32bit
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
@@ -64,16 +68,16 @@ jobs:
       - name: Build archive
         shell: bash
         run: |
-          staging="xlcat-${{ needs.create-release.outputs.version }}-${{ matrix.target }}"
+          staging="xlcat-${{ needs.create-release.outputs.version }}-${{ matrix.friendly_name }}"
           mkdir -p "$staging"
           cp {README.md,LICENSE.txt} "$staging/"
           if [ "${{ matrix.os }}" = "windows-2019" ]; then
             cp "target/release/xlcat.exe" "$staging/"
-            7z a "$staging.zip" "$staging"
+            (cd "$staging" && 7z a "../$staging.zip" *)
             echo "ASSET=$staging.zip" >> $GITHUB_ENV
           else
             cp "target/release/xlcat" "$staging/"
-            tar czf "$staging.tar.gz" "$staging"
+            tar czf "$staging.tar.gz" -C "$staging"
             echo "ASSET=$staging.tar.gz" >> $GITHUB_ENV
           fi
       - name: Upload release archive
