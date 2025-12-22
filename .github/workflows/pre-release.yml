@@ -71,7 +71,7 @@ jobs:
           staging="xlcat-${{ needs.create-release.outputs.version }}-${{ matrix.friendly_name }}"
           mkdir -p "$staging"
           cp {README.md,LICENSE.txt} "$staging/"
-          if [ "${{ matrix.os }}" = "windows-*" ]; then
+          if [[ "${{ matrix.build }}" == win* ]]; then
             cp "target/release/xlcat.exe" "$staging/"
             (cd "$staging" && 7z a "../$staging.zip" *)
             echo "ASSET=$staging.zip" >> $GITHUB_ENV
