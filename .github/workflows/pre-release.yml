@@ -77,7 +77,7 @@ jobs:
             echo "ASSET=$staging.zip" >> $GITHUB_ENV
           else
             cp "target/release/xlcat" "$staging/"
-            tar czf "$staging.tar.gz" -C "$staging"
+            COPYFILE_DISABLE=1 tar czf "$staging.tar.gz" -C "$staging" .
             echo "ASSET=$staging.tar.gz" >> $GITHUB_ENV
           fi
       - name: Upload release archive
